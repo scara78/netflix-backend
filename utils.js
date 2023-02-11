@@ -17,6 +17,7 @@ const toTmdb = async (movie) => {
 		})
 		result['imdb'] = movie.imdb
 		result['runtime'] = movie.runtime
+		result['quality'] = movie.quality
 		result['genre'] = genre;
 		result['season'] = null;
 		return result
@@ -29,6 +30,7 @@ const toTmdb = async (movie) => {
 			result['genre'] = genre;
 			result['imdb'] = movie.imdb
 			result['runtime'] = movie.runtime
+			result['quality'] = movie.quality
 			result['genre'] = genre;
 			result['season'] = parseInt(movie.detail.substring(movie.detail.lastIndexOf("/")).replaceAll('/season', ''))
 			return result	
@@ -83,10 +85,10 @@ const getHome = async () => {
 
 const getDetail = async (tmdb, type) => {
 	if(type == 'movie') {
-		let response = await axios.get(`${baseURL}/movie/${tmdb}?api_key=${apiKey}&append_to_response=videos,images`)
+		let response = await axios.get(`${baseURL}/movie/${tmdb}?api_key=${apiKey}&append_to_response=videos,images,credits`)
 		return response.data
 	} else {
-		let response = await axios.get(`${baseURL}/tv/${tmdb}?api_key=${apiKey}&append_to_response=videos,images`)
+		let response = await axios.get(`${baseURL}/tv/${tmdb}?api_key=${apiKey}&append_to_response=videos,images,credits`)
 		return response.data
 	}
 }
