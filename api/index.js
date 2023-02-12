@@ -52,4 +52,14 @@ app.get("/api/genre", async (req, res) => {
 	}
 })
 
+app.get("/api/newest", async (req, res) => {
+	try {
+		const page = req.query.page
+		const data = await utils.getNewest(page);
+		res.send(shuffle(data))
+	} catch {
+		return res.send([])
+	}
+})
+
 module.exports = app;

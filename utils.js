@@ -146,4 +146,28 @@ const getGenre = async (genre, page) => {
 	return result
 }
 
-module.exports = { getHome, getDetail, getEpisode, getSearch, getGenre }
+const getNewest = async (page) => {
+	let result = []
+	const promise = []
+
+	const resMovie = await axios.get(`${gDrive}/v1/movie/newest?limit=5&page=${page}`)
+	if(resMovie.data != null) {
+		resMovie.data.forEach((item) => {
+			promise.push(toTmdb(item))
+		})
+	}
+
+	const resSeries = await axios.get(`${gDrive}/v2/series/newest?limit=5&page=${page}`)
+	if(resSeries.data != null) {
+		resSeries.data.forEach((item) => {
+			promise.push(toTmdb(item))
+		})
+	}
+
+	result = await Promise.all(promise)
+	result = result.filter((item) => item);
+
+	return result
+}
+
+module.exports = { getHome, getDetail, getEpisode, getSearch, getGenre, getNewest }
