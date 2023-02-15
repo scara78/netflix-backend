@@ -25,7 +25,7 @@ app.get("/api/player", async (req, res) => {
 				</style>
 			</head>
 			<body>
-				<iframe src="${url}" frameborder="0" allow="fullscreen"/>
+				<iframe src="${req.query.subtitle ? url + '&subtitle=' + req.query.subtitle : url}" frameborder="0" allow="fullscreen"/>
 			</body>
 			</body>
 		</html>
