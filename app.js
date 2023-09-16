@@ -7,30 +7,12 @@ const path = require('path')
 const utils = require('./utils.js')
 
 app.get("/api/player", async (req, res) => {
-	const url = req.query.url
-	res.send(`
-		<html>
-			<head>
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<style>
-					iframe {
-						width: 100vw;
-						height: 100vh;
-					}
-
-					body {
-						margin: 0;
-						padding: 0;
-					}
-				</style>
-			</head>
-			<body>
-				<iframe src="${req.query.subtitle ? url + '&subtitle=' + req.query.subtitle : url}" frameborder="0" allow="fullscreen"/>
-			</body>
-			</body>
-		</html>
-
-	`)
+	const goMovieId = req.query.goMovieId
+	const imdbId = req.query.imdbId
+	const season = req.query.season
+	const episode = req.query.episode
+	const data = await utils.getVideo(goMovieId, imdbId, season, episode);
+	res.send(data);
 })
 
 app.get("/api/home", async (req, res) => {
@@ -75,7 +57,7 @@ app.get("/api/genre", async (req, res) => {
 })
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+	console.log(`Example app listening on port ${port}`)
 })
 
 module.exports = app;

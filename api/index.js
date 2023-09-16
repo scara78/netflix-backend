@@ -8,34 +8,16 @@ const utils = require('./../utils.js')
 const shuffle = require('shuffle-array')
 
 app.get('/', async (req, res) => {
-	res.send('blip bloppp bloop');
+	res.send('server is running 🏃');
 })
 
 app.get("/api/player", async (req, res) => {
-	const url = req.query.url
-	res.send(`
-		<html>
-			<head>
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<style>
-					iframe {
-						width: 100vw;
-						height: 100vh;
-					}
-
-					body {
-						margin: 0;
-						padding: 0;
-					}
-				</style>
-			</head>
-			<body>
-				<iframe src="${req.query.subtitle ? url + '&subtitle=' + req.query.subtitle : url}" frameborder="0" allow="fullscreen"/>
-			</body>
-			</body>
-		</html>
-
-	`)
+	const goMovieId = req.query.goMovieId
+	const imdbId = req.query.imdbId
+	const season = req.query.season
+	const episode = req.query.episode
+	const data = await utils.getVideo(goMovieId, imdbId, season, episode);
+	res.send(data);
 })
 
 app.get("/api/home", async (req, res) => {
