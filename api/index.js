@@ -7,6 +7,10 @@ const path = require('path')
 const utils = require('./../utils.js')
 const shuffle = require('shuffle-array')
 
+app.get('/', async (req, res) => {
+	res.send('server is running 🏃');
+})
+
 app.get('/api/home', async (req, res) => {
 	const data = await utils.getHome()
 	res.send(data)
