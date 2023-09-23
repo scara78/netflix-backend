@@ -6,54 +6,39 @@ const port = 3000
 const path = require('path')
 const utils = require('./utils.js')
 
-app.get("/api/player", async (req, res) => {
-	const goMovieId = req.query.goMovieId
+app.get('/api/home', async (req, res) => {
+	const data = await utils.getHome()
+	res.send(data)
+});
+
+app.get('/api/search', async (req, res) => {
+	const keyword = req.query.keyword
+	const page = req.query.page
+	const data = await utils.getSearch(keyword, page)
+	res.send(data)
+})
+
+app.get('/api/genre', async (req, res) => {
+	const genre = req.query.genre
+	const page = req.query.page
+	const data = await utils.getGenre(genre, page)
+	res.send(data)
+})
+
+app.get('/api/video', async (req, res) => {
 	const imdbId = req.query.imdbId
 	const season = req.query.season
 	const episode = req.query.episode
-	const data = await utils.getVideo(goMovieId, imdbId, season, episode);
-	res.send(data);
-})
-
-app.get("/api/home", async (req, res) => {
-	const data = await utils.getHome();
+	const data = await utils.getVideo(imdbId, season, episode)
 	res.send(data)
 })
 
-app.get("/api/detail", async (req, res) => {
-	const tmdb = req.query.tmdb
-	const type = req.query.type
-	const data = await utils.getDetail(tmdb, type);
+app.get('/api/subtitle', async (req, res) => {
+	const title = req.query.title
+	const path = req.query.path
+	const subpath = req.query.subpath
+	const data = await utils.getSubtitle(title, path, subpath)
 	res.send(data)
-})
-
-app.get("/api/episode", async (req, res) => {
-	const tmdb = req.query.tmdb
-	const season = req.query.season
-	const data = await utils.getEpisode(tmdb, season);
-	res.send(data)
-})
-
-app.get("/api/search", async (req, res) => {
-	try {
-		const title = req.query.title
-		const page = req.query.page
-		const data = await utils.getSearch(title, page);
-		res.send(data)
-	} catch {
-		return res.send([])
-	}
-})
-
-app.get("/api/genre", async (req, res) => {
-	try {
-		const genre = req.query.genre
-		const page = req.query.page
-		const data = await utils.getGenre(genre, page);
-		res.send(data)
-	} catch {
-		return res.send([])
-	}
 })
 
 app.listen(port, () => {
