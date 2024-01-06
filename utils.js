@@ -1,19 +1,14 @@
 const axios = require("axios")
 const apiKey = 'cad7722e1ca44bd5f1ea46b59c8d54c8'
 const tmdbURL = 'https://api.themoviedb.org/3'
-const baseURL = 'https://hurawatch.stream'
-const vidURL = 'https://vidsrc.to'
+const baseURL = 'https://xcine.click'
 const { subscene } = require("node-subtitle-tools");
 const jsdom = require("jsdom");
-const vm = require('vm')
-const key = '8z5Ag5wgagfsOuhz'
 
-const getId = (link) => {
-	return link.getAttribute('href').split('-').pop().replace('/', '')
-}
+const parseURL = (url) => url.includes('https') ? url : url.replace('//', 'https://')
 
-const isSeries = (link) => {
-	return link.getAttribute('href').includes('series')
+const isSeries = (title) => {
+	return title.toLowerCase().includes('staffel')
 }
 
 const getTmdbDetail = async (id, isSeries) => {
@@ -24,17 +19,15 @@ const getTmdbDetail = async (id, isSeries) => {
 
 const getMoviesData = (data) => {
 	const link = data.getElementsByTagName('a')
-	const titleElement = data.getElementsByClassName('film-name')
+	const titleElement = data.getElementsByClassName('movie-item__title')
 	const imageElement = data.getElementsByTagName('img')
 	const image = imageElement[0].getAttribute('src')
-	const id = getId(link[0])
 	const title = titleElement[0].textContent.trim()
-	const tmdbImageId = image.split('/').pop().split('.')[0]
-	const series = isSeries(link[0])
+	const tmdbImageId = image.split('/').pop().split('_').pop().split('.')[0]
+	const series = isSeries(title)
 	const movie = {
-		'id': id,
-		'link': link[0].getAttribute('href').split('/')[link[0].getAttribute('href').split('/').length - 2],
-		'title': title,
+		'link': link[0].getAttribute('href'),
+		'title': isSeries ? title.split(' - ')[0] : title,
 		'tmdbImageId': tmdbImageId,
 		'series': series,
 	}
@@ -51,20 +44,11 @@ const getTmdb = async (movie) => {
 		let id = tmdb.results[i].id;
 		let tmdbDetail = await getTmdbDetail(id, movie.series)
 
-		if (movie.isBanner) {
-			const filter = tmdbDetail.images.backdrops.filter((item) => item.file_path.includes(movie.tmdbImageId))
-			if (filter.length > 0) {
-				console.log(`FOUND ${movie.title}`)
-				data = tmdbDetail
-				break;
-			}
-		} else {
-			const filter = tmdbDetail.images.posters.filter((item) => item.file_path.includes(movie.tmdbImageId))
-			if (filter.length > 0) {
-				console.log(`FOUND ${movie.title}`)
-				data = tmdbDetail
-				break;
-			}
+		const filter = tmdbDetail.images.posters.filter((item) => item.file_path.toLowerCase().includes(movie.tmdbImageId))
+		if (filter.length > 0) {
+			console.log(`FOUND ${movie.title}`)
+			data = tmdbDetail
+			break;
 		}
 	}
 	movie['tmdb'] = data;
@@ -73,78 +57,57 @@ const getTmdb = async (movie) => {
 
 const getHome = async () => {
 	const response = {}
-	const raw = await axios.get(`${baseURL}/home`);
-	let [banner, trendingMovies, trendingTv] = await Promise.all(
+	let [trendingMovies, trendingTv] = await Promise.all(
 		[
-			getBanner(raw.data),
-			getTrendingMovies(raw.data),
-			getTrendingTv(raw.data)
+			getTrendingMovies(),
+			getTrendingTv()
 		]
 	);
-	response['banner'] = banner
-	response['trendingMovies'] = trendingMovies
-	response['trendingTv'] = trendingTv
+	response['banner'] = trendingMovies.filter((item) => item.tmdb.name || item.tmdb.title)[0]
+	response['trendingMovies'] = trendingMovies.filter((item) => item.tmdb.name || item.tmdb.title)
+	response['trendingTv'] = trendingTv.filter((item) => item.tmdb.name || item.tmdb.title)
 	return response;
 }
 
 const getSearch = async (keyword, page) => {
 	let promise = []
 	let movieList = []
-	const raw = await axios.get(`${baseURL}/search/${keyword}/page/${page}/`)
+	const raw = await axios.get(`${baseURL}/index.php?do=search&subaction=search&search_start=${page}&full_search=0&story=${keyword}`)
 	const htmlRaw = raw.data
 	const dom = new jsdom.JSDOM(htmlRaw);
-	const selector = dom.window.document.querySelectorAll('.flw-item')
+	const selector = dom.window.document.querySelectorAll('.movie-item')
 
 	for (let i = 0; i < selector.length; i++) {
 		const movie = getMoviesData(selector[i])
 		promise.push(getTmdb(movie))
 	}
 	movieList = await Promise.all(promise)
-	return movieList;
+	return movieList.filter((item) => item.tmdb.name || item.tmdb.title);
 }
 
 const getGenre = async (genre, page) => {
 	let promise = []
 	let movieList = []
-	const raw = await axios.get(`${baseURL}/genre/${genre}/page/${page}/`)
+	const raw = await axios.get(`${baseURL}/${genre}/page/${page}/`)
 	const htmlRaw = raw.data
 	const dom = new jsdom.JSDOM(htmlRaw);
-	const selector = dom.window.document.querySelectorAll('.flw-item')
+	const selector = dom.window.document.querySelectorAll('.movie-item')
 
 	for (let i = 0; i < selector.length; i++) {
 		const movie = getMoviesData(selector[i])
 		promise.push(getTmdb(movie))
 	}
 	movieList = await Promise.all(promise)
-	return movieList;
+	return movieList.filter((item) => item.tmdb.name || item.tmdb.title);
 }
 
-
-const getBanner = async (htmlRaw) => {
-	const movie = {}
-	const dom = new jsdom.JSDOM(htmlRaw);
-	const selector = dom.window.document.querySelector('.swiper-slide')
-	const link = selector.getElementsByTagName('a')
-	const image = selector.style.backgroundImage
-	const titleElement = selector.getElementsByClassName('film-title')
-	const id = getId(link[0])
-	const tmdbImageId = image.replace('(', '').replace(')', '').split('/').pop().split('.')[0]
-	const title = titleElement[0].textContent.trim()
-	const series = isSeries(link[0])
-	movie['id'] = id
-	movie['link'] = link[0].getAttribute('href').split('/')[link[0].getAttribute('href').split('/').length - 2],
-		movie['tmdbImageId'] = tmdbImageId
-	movie['title'] = title
-	movie['isBanner'] = true
-	movie['series'] = series
-	return getTmdb(movie);
-}
-
-const getTrendingMovies = async (htmlRaw) => {
+const getTrendingMovies = async () => {
+	const raw = await axios.get(`${baseURL}/kinofilme-online/`);
+	const htmlRaw = raw.data;
 	let promise = []
 	let movieList = []
 	const dom = new jsdom.JSDOM(htmlRaw);
-	const selector = dom.window.document.querySelectorAll('div#trending-movies .flw-item')
+	const selector = dom.window.document.querySelectorAll('.movie-item')
 
 	for (let i = 0; i < selector.length; i++) {
 		const movie = getMoviesData(selector[i])
@@ -154,11 +117,13 @@ const getTrendingMovies = async (htmlRaw) => {
 	return movieList;
 }
 
-const getTrendingTv = async (htmlRaw) => {
+const getTrendingTv = async () => {
+	const raw = await axios.get(`${baseURL}/serienstream-deutsch/`);
+	const htmlRaw = raw.data;
 	let promise = []
 	let movieList = []
 	const dom = new jsdom.JSDOM(htmlRaw);
-	const selector = dom.window.document.querySelectorAll('div#trending-tv .flw-item')
+	const selector = dom.window.document.querySelectorAll('.movie-item')
 
 	for (let i = 0; i < selector.length; i++) {
 		const movie = getMoviesData(selector[i])
@@ -168,102 +133,55 @@ const getTrendingTv = async (htmlRaw) => {
 	return movieList;
 }
 
-const getVideo = async (imdbId, season, episode) => {
+const getEpisode = async (tmdbId, season) => {
+	const response = await axios.get(`${tmdbURL}/tv/${tmdbId}/season/${season}?api_key=${apiKey}`);
+	return response.data;
+}
+
+const getVideo = async (link, episode) => {
 	const response = {}
-	let raw = '';
+	const raw = await axios.get(link)
+	const data = raw.data
+	const dom = new jsdom.JSDOM(data)
 
-	if (season) {
-		raw = await axios.get(`${vidURL}/embed/tv/${imdbId}/${season}/${episode}`)
+	if (episode) {
+		const superVideoURL = dom.window.document.querySelectorAll('[data-link*=supervideo]')
+		let epsURL = '';
+		superVideoURL.forEach(element => {
+			if (element.getAttribute('id').includes(`_${episode}`)) {
+				epsURL = element.getAttribute('data-link')
+			}
+		});
+
+		const superVideoURLRaw = await axios.get(parseURL(epsURL))
+		const streamData = superVideoURLRaw.data
+		const streamDom = new jsdom.JSDOM(streamData)
+
+		const length = streamDom.window.document.querySelectorAll('[type*=javascript]').length - 1
+		const evalData = streamDom.window.document.querySelectorAll('[type*=javascript]')[length].textContent.replace('eval', '')
+		const result = `${eval(evalData)}`
+		response['file'] = result.match(/(?<=file:")(.*)(?="}],image)/g)[0]
 	} else {
-		raw = await axios.get(`${vidURL}/embed/movie/${imdbId}`)
+		const superVideoURL = dom.window.document.querySelector('[data-link*=supervideo]').getAttribute('data-link')
+		const superVideoURLRaw = await axios.get(parseURL(superVideoURL))
+		const streamData = superVideoURLRaw.data
+		const streamDom = new jsdom.JSDOM(streamData)
+
+		const length = streamDom.window.document.querySelectorAll('[type*=javascript]').length - 1
+		const evalData = streamDom.window.document.querySelectorAll('[type*=javascript]')[length].textContent.replace('eval', '')
+		const result = `${eval(evalData)}`
+		response['file'] = result.match(/(?<=file:")(.*)(?="}],image)/g)[0]
 	}
 
-	raw = raw.data
-	const dom = new jsdom.JSDOM(raw);
-
-	const dataId = dom.window.document.querySelector('a[data-id]').getAttribute('data-id');
-	const sources = await axios.get(`${vidURL}/ajax/embed/episode/${dataId}/sources`);
-	const sourcesData = sources.data.result.filter((item) => item.title == 'Filemoon')[0];
-	const encryptedUrl = await axios.get(`${vidURL}/ajax/embed/source/${sourcesData.id}`);
-	const fileMoonURL = decryptSourceUrl(encryptedUrl.data.result.url);
-
-	const url = fileMoonURL;
-	const res = await axios.get(url)
-	const regex = /eval\((.*)\)/g;
-	const evalCode = regex.exec(res.data)[0];
-	var rawFile = '';
-
-	try {
-		const sandbox = {
-			jwplayer: () => ({
-				setup: async (config) => {
-					if (config.sources && Array.isArray(config.sources)) {
-						const firstSource = config.sources[0];
-						if (firstSource && firstSource.file) {
-							rawFile = firstSource.file
-						} else {
-							reject(new Error('No file found'));
-						}
-					} else {
-						reject(new Error('No sources found'));
-					}
-				},
-				on: () => { },
-				addButton: () => { },
-				getButton: () => { },
-				seek: () => { },
-				getPosition: () => { },
-				addEventListener: () => { },
-				setCurrentCaptions: () => { },
-				pause: () => { },
-			}),
-			document: {
-				addEventListener: (event, callback) => {
-					if (event === 'DOMContentLoaded') {
-						callback();
-					}
-				},
-			},
-			$: () => ({
-				hide: () => { },
-				get: () => { },
-				detach: () => ({
-					insertAfter: () => { },
-				}),
-			}),
-			jQuery: {},
-			p2pml: {
-				hlsjs: {
-					Engine: class {
-						constructor() {
-							// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-							// @ts-ignore
-							this.on = () => { };
-						}
-
-						createLoaderClass() { }
-					},
-				},
-			},
-		};
-
-		vm.createContext(sandbox);
-		vm.runInContext(evalCode, sandbox);
-
-	} catch (e) {
-
-	}
-
-	response['file'] = rawFile
 	return response;
 }
 
-const getSubtitle = async (title, path, subpath) => {
+const getSubtitle = async (imdbId, path) => {
 	let result = {}
 
-	if (subpath) {
+	if (path) {
 		const downloadedFiles = await subscene.downloadSubtitle(
-			subpath,
+			path,
 			{
 				unzip: true, //Unzip the subtitle
 				convert: true, // Convert the subtitle to vtt
@@ -273,18 +191,14 @@ const getSubtitle = async (title, path, subpath) => {
 		let bufferOriginal = Buffer.from(downloadedFiles[0].buffer);
 		result = bufferOriginal.toString('utf-8')
 	} else {
-		if (path) {
-			result = await subscene.getTitleDetails(
-				path,
-				true,
-				{
-					language: ["id", "en"],
-					rate: ['positive']
-				}
-			);
-		} else {
-			result = await subscene.searchByTitle(title);
-		}
+		result = await subscene.getSubtitleByImdbId(
+			imdbId, 
+			apiKey,
+			{
+				language: ["en", "id"],
+				rate: ['positive']
+			}
+		);
 	}
 
 
@@ -292,54 +206,4 @@ const getSubtitle = async (title, path, subpath) => {
 
 }
 
-const decode = (str) => {
-	const keyBytes = new TextEncoder().encode(key);
-
-	let j = 0;
-	const s = new Uint8Array(256);
-	for (let i = 0; i < 256; i += 1) {
-		s[i] = i;
-	}
-
-	for (let i = 0, k = 0; i < 256; i += 1) {
-		j = (j + s[i] + keyBytes[k % keyBytes.length]) & 0xff;
-		[s[i], s[j]] = [s[j], s[i]];
-		k += 1;
-	}
-
-	const decoded = new Uint8Array(str.length);
-	let i = 0;
-	let k = 0;
-	for (let index = 0; index < str.length; index += 1) {
-		i = (i + 1) & 0xff;
-		k = (k + s[i]) & 0xff;
-		[s[i], s[k]] = [s[k], s[i]];
-		const t = (s[i] + s[k]) & 0xff;
-		decoded[index] = str[index] ^ s[t];
-	}
-
-	return decoded;
-}
-
-const decryptSourceUrl = (sourceUrl) => {
-	const encoded = decodeBase64UrlSafe(sourceUrl);
-	const decoded = decode(encoded);
-	const decodedText = new TextDecoder().decode(decoded);
-
-	return decodeURIComponent(decodeURIComponent(decodedText));
-}
-
-const decodeBase64UrlSafe = (str) => {
-	const standardizedInput = str.replace(/_/g, '/').replace(/-/g, '+');
-
-	const binaryData = Buffer.from(standardizedInput, 'base64').toString('binary');
-
-	const bytes = new Uint8Array(binaryData.length);
-	for (let i = 0; i < bytes.length; i += 1) {
-		bytes[i] = binaryData.charCodeAt(i);
-	}
-
-	return bytes;
-}
-
-module.exports = { getHome, getSearch, getGenre, getVideo, getSubtitle }
+module.exports = { getHome, getSearch, getGenre, getVideo, getSubtitle, getEpisode }

@@ -1,11 +1,6 @@
 const express = require('express')
-const axios = require("axios")
-const fs = require('fs')
 const app = express()
-const port = 3000
-const path = require('path')
 const utils = require('./../utils.js')
-const shuffle = require('shuffle-array')
 
 app.get('/', async (req, res) => {
 	res.send('server is running 🏃');
@@ -30,19 +25,24 @@ app.get('/api/genre', async (req, res) => {
 	res.send(data)
 })
 
-app.get('/api/video', async (req, res) => {
-	const imdbId = req.query.imdbId
+app.get('/api/episode', async (req, res) => {
+	const tmdbId = req.query.tmdbId
 	const season = req.query.season
+	const data = await utils.getEpisode(tmdbId, season)
+	res.send(data)
+})
+
+app.get('/api/video', async (req, res) => {
+	const link = req.query.link
 	const episode = req.query.episode
-	const data = await utils.getVideo(imdbId, season, episode)
+	const data = await utils.getVideo(link, episode)
 	res.send(data)
 })
 
 app.get('/api/subtitle', async (req, res) => {
-	const title = req.query.title
+	const imdbId = req.query.imdb
 	const path = req.query.path
-	const subpath = req.query.subpath
-	const data = await utils.getSubtitle(title, path, subpath)
+	const data = await utils.getSubtitle(imdbId, path)
 	res.send(data)
 })
 
