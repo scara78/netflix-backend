@@ -1,7 +1,7 @@
 const axios = require("axios")
 const apiKey = 'cad7722e1ca44bd5f1ea46b59c8d54c8'
 const tmdbURL = 'https://api.themoviedb.org/3'
-const baseURL = 'https://xcine.click'
+const baseURL = 'https://xcine.lat'
 const { subscene } = require("node-subtitle-tools");
 const jsdom = require("jsdom");
 
