@@ -32,10 +32,11 @@ app.get('/api/episode', async (req, res) => {
 	res.send(data)
 })
 
-app.get('/api/video', async (req, res) => {
-	const link = req.query.link
+app.get('/api/link', async (req, res) => {
+	const imdb = req.query.imdb
+	const season = req.query.season
 	const episode = req.query.episode
-	const data = await utils.getVideo(link, episode)
+	const data = await utils.getLink(imdb, season, episode)
 	res.send(data)
 })
 
